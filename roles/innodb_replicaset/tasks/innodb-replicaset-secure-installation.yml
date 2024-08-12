@@ -1,0 +1,49 @@
+---
+- name: innodb-replicaset-secure-installation | Check if mysqld is running
+  shell: pgrep -a "^mysqld$"
+  ignore_errors: True
+  changed_when: False
+  register: mysql_proc_status
+
+- name: innodb-replicaset-secure-installation | Secure Mysql server
+  block:
+    - name: innodb-replicaset-secure-installation | Set the root password
+      mysql_user:
+        login_unix_socket: "{{ percona_server_configuration.my_cnf.socket | default('/var/run/mysqld/mysqld.sock') }}"
+        login_user: root
+        login_password: "{{ mysql_server_root_password }}"
+        config_file: "/dev/null"
+        name: root
+        password: "{{ mysql_server_root_password }}"
+        check_implicit_admin: yes
+        state: present
+        column_case_sensitive: true
+
+    - name: innodb-replicaset-secure-installation | Set the root password with disable remote login
+      mysql_user:
+        login_unix_socket: "{{ percona_server_configuration.my_cnf.socket | default('/var/run/mysqld/mysqld.sock') }}"
+        name: root
+        host: "{{ item }}"
+        password: "{{ mysql_server_root_password }}"
+        state: present
+        column_case_sensitive: true
+      with_items:
+        - "localhost"
+
+    - name: innodb-replicaset-secure-installation | Remove anonymous user
+      mysql_user:
+        login_unix_socket: "{{ percona_server_configuration.my_cnf.socket | default('/var/run/mysqld/mysqld.sock') }}"
+        name: ''
+        host: "{{ item }}"
+        state: absent
+        column_case_sensitive: true
+      with_items:
+        - "localhost"
+
+    - name: innodb-replicaset-secure-installation | Remove test database
+      mysql_db:
+        login_unix_socket: "{{ percona_server_configuration.my_cnf.socket | default('/var/run/mysqld/mysqld.sock') }}"
+        name: test
+        state: absent
+
+  when: mysql_proc_status.rc == 0

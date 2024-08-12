@@ -1,0 +1,8 @@
+#{{ ansible_managed }}
+[mysql]
+port = {{ percona_server_configuration.my_cnf.port | default('3307') }}
+socket = {{ percona_server_configuration.my_cnf.socket | default('/var/run/mysqld/mysqld.sock') }}
+
+[client]
+user = root
+password = "{{ mysql_server_root_password }}"

@@ -1,0 +1,7 @@
+---
+- name: innodb-replicaset-import-zoneinfo | Install timezone info
+  become: yes
+  shell:
+    cmd: set -o pipefail && mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql --database=mysql
+    executable: '/usr/bin/bash'
+  changed_when: false

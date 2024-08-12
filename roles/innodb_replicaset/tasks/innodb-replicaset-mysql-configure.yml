@@ -1,0 +1,67 @@
+---
+- name: innodb-replicaset-mysql-configure | Check if mysqld is running
+  shell: pgrep -a "^mysqld$"
+  ignore_errors: True
+  changed_when: False
+  register: mysql_proc_status
+
+- name: innodb-replicaset-mysql-configure | Update /etc/mysql/mysql.conf.d/mysqld.cnf
+  template:
+    src: innodb-replicaset/mysql-server-my-cnf.j2
+    dest: /etc/mysql/mysql.conf.d/mysqld.cnf
+    owner: mysql
+    group: mysql
+    mode: 0644
+    backup: yes
+  notify: "Warning file /etc/mysql/mysql.conf.d/mysqld.cnf has been changed"
+
+
+- name: innodb-replicaset-mysql-configure | Update /root/.my.cnf
+  template:
+    src: innodb-replicaset/mysql-client-my-cnf.j2
+    dest: /root/.my.cnf
+    owner: root
+    group: root
+    mode: 0644
+    # backup: yes
+
+
+- name: innodb-replicaset-mysql-configure | Update /etc/mysql/conf.d/mysql.cnf
+  template:
+    src: innodb-replicaset/mysql-client-my-cnf.j2
+    dest: /etc/mysql/conf.d/mysql.cnf
+    owner: root
+    group: root
+    mode: 0644
+    # backup: yes
+
+- name: innodb-replicaset-mysql-configure | Update .mysqlsh/options.json
+  template:
+    src: mysql-shell/options.json.j2
+    dest: /root/.mysqlsh/options.json
+    owner: root
+    group: root
+    mode: 0600
+    # backup: yes
+
+- name: innodb-replicaset-mysql-configure | Get /etc/mysql/my.cnf
+  shell: >
+    cat /etc/mysql/my.cnf
+  changed_when: False
+  register: get_my_cnf
+
+- name: innodb-replicaset-mysql-configure | Debug output /etc/mysql/my.cnf
+  debug: var=get_my_cnf.stdout_lines
+
+- name: innodb-replicaset-mysql-configure | Initialize MySQL data directory
+  command:
+    cmd: mysqld --defaults-file=/etc/mysql/my.cnf --initialize-insecure --user=mysql
+    creates: /var/lib/mysql/auto.cnf
+  when: mysql_proc_status.rc != 0
+
+- name: innodb-replicaset-mysql-configure | Ensures mysqld is started and enabled
+  become: yes
+  ansible.builtin.systemd:
+    name: mysql
+    state: restarted
+    daemon_reload: yes

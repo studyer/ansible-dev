@@ -1,0 +1,104 @@
+---
+######### InnoDB ReplicaSet
+innodb_replicaset_cluster_admin: "rsadmin"
+innodb_replicaset_cluster_password: "*Replica_pass21_sample"
+innodb_replicaset_name: "rs_infra"
+
+######### MySQLRouter
+mysqlrouter_password: "*MysqlRouter_pass21_sample"
+mysqlrouter_connect_timeout: 10
+mysqlrouter_read_timeout: 10
+mysqlrouter_bind_address: 0.0.0.0
+
+######### Mysql Server
+mysql_server_version: "8.4.2"
+mysql_server_root_password: "demozCYqkQsampleYRwiQ0n7demo"
+
+mysql_server_plugins:
+  uninstall: []
+  install:
+    - INSTALL PLUGIN clone SONAME 'mysql_clone.so'
+
+######### my.cnf settings
+percona_server_configuration:
+  my_cnf:
+    server_id_prefix: 101
+    port: 3307
+    bind_address: '0.0.0.0'
+    log_bin: 'mysql-bin'
+    # binlog_format: 'ROW'
+    binlog_row_image: 'FULL'
+  my_cnf_extra:
+    innodb_io_capacity: 1000
+    innodb_io_capacity_max: 1000
+    max_connections: 1000
+    interactive_timeout: 28800
+    wait_timeout: 86400
+    connect_timeout: 10
+    net_read_timeout: 300
+    performance_schema: 1
+
+######## mysqld_exporter
+mysqld_exporter_username: "mysqld_exporter"
+mysqld_exporter_password: "umPPsampleF8gZvH"
+mysqld_exporter_packages:
+  url: 'https://github.com/prometheus/mysqld_exporter/releases/download/v0.15.1/mysqld_exporter-0.15.1.linux-amd64.tar.gz'
+  checksum: 'sha256:85ea5bc68e1b9f466c1df10ff016652dd210371d42245e012b876265e89ae29d'
+
+######## mysqlrouter_exporter
+mysqlrouter_exporter_username: "mysqlrouter_exporter"
+mysqlrouter_exporter_password: "mysqlrouter_samplepass"
+mysqlrouter_exporter_packages:
+  url: 'https://github.com/rluisr/mysqlrouter_exporter/releases/download/v6.0.0/mysqlrouter_exporter_linux_amd64.tar.gz'
+  checksum: 'sha256:4a9fcb47845d02c5c90b127d8337ea8ad19c8b114cf8a6f5aff8c795137de926'
+
+######### Systemd limit
+systemd_services:
+  mysql:
+    LimitFSIZE: 'infinity'
+    LimitCPU: 'infinity'
+    LimitAS: 'infinity'
+    LimitNOFILE: 2000000
+    LimitNPROC: 2000000
+
+######### System users, e.g mysqld_exporter 
+mysql_server_system_users:
+  - name: "{{ innodb_replicaset_cluster_admin }}"
+    password: "{{ innodb_replicaset_cluster_password }}"
+    encrypted: no
+    priv: "mysql_innodb_cluster_metadata_bkp.*:ALTER,ALTER ROUTINE,CREATE,CREATE ROUTINE,CREATE TEMPORARY TABLES,CREATE VIEW,DELETE,DROP,EVENT,EXECUTE,INDEX,INSERT,LOCK TABLES,REFERENCES,SHOW VIEW,TRIGGER,UPDATE,GRANT/mysql_innodb_cluster_metadata_previous.*:ALTER,ALTER ROUTINE,CREATE,CREATE ROUTINE,CREATE TEMPORARY TABLES,CREATE VIEW,DELETE,DROP,EVENT,EXECUTE,INDEX,INSERT,LOCK TABLES,REFERENCES,SHOW VIEW,TRIGGER,UPDATE,GRANT/mysql_innodb_cluster_metadata.*:ALTER,ALTER ROUTINE,CREATE,CREATE ROUTINE,CREATE TEMPORARY TABLES,CREATE VIEW,DELETE,DROP,EVENT,EXECUTE,INDEX,INSERT,LOCK TABLES,REFERENCES,SHOW VIEW,TRIGGER,UPDATE,GRANT/*.*:CREATE USER,EXECUTE,FILE,PROCESS,RELOAD,REPLICATION CLIENT,REPLICATION SLAVE,SELECT,SHUTDOWN,CLONE_ADMIN,CONNECTION_ADMIN,GROUP_REPLICATION_ADMIN,PERSIST_RO_VARIABLES_ADMIN,REPLICATION_APPLIER,REPLICATION_SLAVE_ADMIN,ROLE_ADMIN,SYSTEM_VARIABLES_ADMIN,GRANT/mysql.*:SELECT,DELETE,INSERT,UPDATE,GRANT/performance_schema.*:SELECT,GRANT"
+    host: "%"
+    state: present
+  - name: "{{ mysqlrouter_exporter_username }}"
+    password: "{{ mysqlrouter_password }}"
+    encrypted: no
+    priv: "mysql_innodb_cluster_metadata.*:EXECUTE,SELECT,DELETE,INSERT,UPDATE/performance_schema.*:SELECT"
+    host: "%"
+    state: present
+  - name: "{{ mysqld_exporter_username }}"
+    password: "{{ mysqld_exporter_password }}"
+    encrypted: no
+    priv: "*.*:PROCESS,REPLICATION CLIENT,SELECT"
+    host: "127.0.0.1"
+    state: present
+
+######### Change data capture (CDC) users, e.g dbz_wordpress_ro
+percona_server_change_data_capture_users:
+  - name: "dbz_wordpress_ro"
+    password: "*dbzwordpressPass1"
+    priv: "*.*:SELECT,RELOAD,SHOW DATABASES,REPLICATION SLAVE,REPLICATION CLIENT"
+    host: "%"
+    state: present
+
+######### Application databases, e.g wordpress_db
+percona_server_application_databases:
+  - name: "wordpress_db"
+    state: present
+
+######### Application users, e.g wordpress_rw
+percona_server_application_users:
+  - name: "wordpress_rw"
+    password: "*wordpressPass1"
+    priv: "wordpress_db.*:ALTER,CREATE,DELETE,INDEX,INSERT,REFERENCES,SELECT,UPDATE"
+    host: "%"
+    state: present

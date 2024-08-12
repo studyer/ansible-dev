@@ -1,0 +1,15 @@
+---
+- name: Deploy InnoDB ReplicaSet
+  hosts: dbservers
+  pre_tasks:
+    - name: Verify Ansible meets InnoDB ReplicaSet requirements.
+      assert:
+        that: "ansible_version.full is version_compare('2.16.0', '>=')"
+        msg: >
+          "You must update Ansible to at least 2.16.0 to use this playbook"
+  roles:
+    - role: robertdebock.logrotate
+      tags: logrotate
+
+    - role: innodb_replicaset
+      tags: innodb-replicaset
